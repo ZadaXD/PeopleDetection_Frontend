@@ -8,54 +8,75 @@ use Illuminate\Support\Facades\Http;
 
 class CameraController extends Controller
 {
+    // ➡️ Tambah kamera baru ke DB + register ke Python
     public function storeToDb(Request $request)
     {
-        $cam = new Cctv();
-        $cam->name = $request->name;
-        $cam->rtsp_url = $request->rtsp_url;
-        $cam->save();
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'rtsp_url' => 'required|string',
+        ]);
+
+        $cam = Cctv::create([
+            'name' => $request->name,
+            'rtsp_url' => $request->rtsp_url,
+            'is_active' => 1,
+            'min_session_duration' => 10,
+        ]);
 
         // register ke Python
-        Http::post(pythonApi('camera'), [
-            'id'   => $cam->id,
-            'name' => $cam->name,
-            'rtsp_url' => $cam->rtsp_url,
-        ]);
+        try {
+            Http::post(pythonApi('camera'), [
+                'id'       => $cam->id,
+                'name'     => $cam->name,
+                'rtsp_url' => $cam->rtsp_url,
+            ]);
+        } catch (\Exception $e) {
+            return back()->with('status', 'Kamera tersimpan tapi gagal register ke Python: ' . $e->getMessage());
+        }
 
         return back()->with('status', 'Kamera berhasil ditambahkan');
     }
 
+
+    // ➡️ Hapus kamera dari DB + beritahu Python
     public function destroy($id)
     {
         $cam = Cctv::findOrFail($id);
         $cam->delete();
 
-        Http::delete(pythonApi("camera/{$id}"));
+        try {
+            Http::delete(pythonApi("camera/{$id}"));
+        } catch (\Exception $e) {
+            return back()->with('status', 'Kamera dihapus dari DB, tapi gagal hapus di Python: ' . $e->getMessage());
+        }
 
         return back()->with('status', 'Kamera dihapus');
     }
 
+    // ➡️ Start recording
     public function startRecording($id)
     {
         $resp = Http::post(pythonApi("start_recording/{$id}"));
-        return back()->with('status', $resp->successful() ? 'Recording started' : 'Failed to start');
+        return back()->with('status', $resp->successful() ? 'Recording dimulai' : 'Gagal memulai recording');
     }
 
+    // ➡️ Edit zone
     public function editZone($id)
     {
         $camera = Cctv::findOrFail($id);
 
-        // Ambil zona dari DB
+        // --- Zona dari DB
         $zonesDb = $camera->zones()->get()->map(function ($z) {
             return [
                 'id'         => $z->id,
-                'name'       => $z->name,
+                'name'       => $z->zone_name,
                 'max_people' => $z->max_people ?? 0,
-                'source'     => 'db', // penanda sumber
+                'coordinates' => $z->coordinates,
+                'source'     => 'db',
             ];
         })->toArray();
 
-        // Ambil zona dari API
+        // --- Zona dari API
         try {
             $resp = Http::get(pythonApi("cameras/{$id}/zones"));
             $zonesApi = $resp->successful() ? collect($resp->json())->map(function ($z) {
@@ -63,7 +84,8 @@ class CameraController extends Controller
                     'id'         => $z['id'],
                     'name'       => $z['name'],
                     'max_people' => $z['max_people'] ?? 0,
-                    'source'     => 'api', // penanda sumber
+                    'coordinates' => $z['coordinates'] ?? null,
+                    'source'     => 'api',
                 ];
             })->toArray() : [];
         } catch (\Exception $e) {
@@ -77,24 +99,49 @@ class CameraController extends Controller
     }
 
 
-
+    // ➡️ Simpan zona baru
     public function storeZone(Request $request, $id)
     {
-        $resp = Http::post(pythonApi("camera/{$id}/zone"), [
-            'name'        => $request->zone_name,
-            'coordinates' => $request->zone_coordinates,
-            'max_people'  => $request->zone_max_people,
+        $request->validate([
+            'zone_name' => 'required|string|max:255',
+            'zone_coordinates' => 'required|string',
+            'zone_max_people' => 'nullable|integer|min:0',
         ]);
 
-        return back()->with('status', $resp->successful() ? 'Zona disimpan' : 'Gagal simpan zona');
+        // Simpan ke DB
+        $zone = new \App\Models\Zone();
+        $zone->camera_id = $id;
+        $zone->zone_name = $request->zone_name;
+        $zone->coordinates = $request->zone_coordinates;
+        $zone->max_people = $request->zone_max_people ?? 4;
+        $zone->max_empty_duration = 300;
+        $zone->inactive_threshold = 0;
+        $zone->save();
+
+        // Kirim ke Python API juga (sinkronisasi)
+        try {
+            Http::post(pythonApi("camera/{$id}/zone"), [
+                'name'        => $zone->zone_name,
+                'coordinates' => $zone->coordinates,
+                'max_people'  => $zone->max_people,
+            ]);
+        } catch (\Exception $e) {
+            // Bisa diabaikan kalau Python offline
+        }
+
+        return back()->with('status', 'Zona berhasil disimpan ke DB dan sinkron ke Python');
     }
 
+
+
+    // ➡️ Hapus zona
     public function deleteZone($id, $zoneId)
     {
         $resp = Http::delete(pythonApi("camera/{$id}/zone/{$zoneId}"));
         return back()->with('status', $resp->successful() ? 'Zona dihapus' : 'Gagal hapus zona');
     }
 
+    // ➡️ Atur minimal durasi sesi
     public function setMinSession(Request $request, $id)
     {
         $totalSeconds =

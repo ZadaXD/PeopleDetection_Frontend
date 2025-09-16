@@ -5,9 +5,9 @@
             <span class="app-brand-logo">
                 <img src="{{ asset('logokti.jpg') }}" alt="KTI Logo" style="height: 55px; width: auto;">
             </span>
-            <span class="app-brand-text demo menu-text fw-bold ms-2 text-uppercase">
+            <span class="app-brand-text demo menu-text fw-bold ms-2 text-uppercase text-dark">
                 Kutai Timber
-                <micro class="text-muted d-block text-uppercase" style="font-size: 0.75rem;">Indonesia</micro>
+                <micro class="d-block text-uppercase text-dark" style="font-size: 0.75rem;">Indonesia</micro>
             </span>
         </a>
     </div>

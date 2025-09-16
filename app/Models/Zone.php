@@ -7,10 +7,16 @@ use Illuminate\Database\Eloquent\Model;
 class Zone extends Model
 {
     protected $table = 'zones';
-    protected $fillable = ['camera_id', 'name', 'coordinates', 'max_people'];
+    public $timestamps = false;
 
-    protected $casts = [
-        'coordinates' => 'array'
+    protected $fillable = [
+        'camera_id',
+        'zone_name',
+        'coordinates',
+        'max_people',
+        'max_empty_duration',
+        'empty_threshold_seconds',
+        'inactive_threshold'
     ];
 
     public function camera()
@@ -18,3 +24,4 @@ class Zone extends Model
         return $this->belongsTo(Cctv::class, 'camera_id');
     }
 }
+

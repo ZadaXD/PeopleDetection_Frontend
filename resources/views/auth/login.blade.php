@@ -18,9 +18,9 @@
                                         style="height: 95px; width: auto;">
                                 </span>
 
-                                <h2 class="app-brand-text demo menu-text fw-bolder ms-2 text-uppercase">
+                                <h2 class="app-brand-text demo menu-text fw-bolder ms-2 text-uppercase text-dark">
                                     Kutai Timber
-                                    <medium class="text-muted d-block text-uppercase"
+                                    <medium class="d-block text-uppercase text-dark"
                                         style="font-size: 0.75rem;">Indonesia</medium>
                                 </h2>
                             </a>
