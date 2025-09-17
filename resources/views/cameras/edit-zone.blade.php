@@ -28,7 +28,7 @@
                                         onsubmit="return confirm('Hapus zona {{ $zone['name'] }} ?')">
                                         @csrf
                                         @method('DELETE')
-                                        <button class="btn btn-sm btn-danger">Hapus</button>
+                                        <button class="btn btn-sm btn-danger rounded-pill"><i class="bx bx-trash"></i> Hapus</button>
                                     </form>
                                 @endif
                             </li>
@@ -74,8 +74,8 @@
                     <input type="hidden" name="zone_coordinates" id="zone-input">
 
                     <div class="mt-3 d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">Simpan Zona</button>
-                        <button type="button" id="reset-drawing-btn" class="btn btn-warning">Reset Gambar</button>
+                        <button type="submit" class="btn btn-primary rounded-pill"><i class="bx bx-save"></i> Simpan Zona</button>
+                        <button type="button" id="reset-drawing-btn" class="btn btn-danger rounded-pill"><i class="bx bx-refresh"></i> Reset Gambar</button>
                     </div>
                 </form>
 
@@ -125,13 +125,13 @@
                                 placeholder="Detik">
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-success w-100 mt-3">Simpan Durasi</button>
+                    <button type="submit" class="btn btn-success w-100 mt-3 rounded-pill"><i class="bx bx-save"></i> Simpan Durasi</button>
                 </form>
             </div>
         </div>
 
         <a href="{{ route('dashboard') }}" class="btn btn-secondary rounded-pill">
-            <i class="bx bx-left-arrow-alt me-2"></i> Kembali
+            <i class="bx bx-left-arrow-alt"></i> Kembali
         </a>
     </div>
 

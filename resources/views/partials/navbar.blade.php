@@ -3,9 +3,9 @@
     <div class="app-brand demo">
         <a href="{{ url('/') }}" class="app-brand-link">
             <span class="app-brand-logo">
-                <img src="{{ asset('logokti.jpg') }}" alt="KTI Logo" style="height: 55px; width: auto;">
+                <img src="{{ asset('logokti.jpg') }}" alt="KTI Logo" style="height: 45px; width: auto;">
             </span>
-            <span class="app-brand-text demo menu-text fw-bold ms-2 text-uppercase text-dark">
+            <span class="app-brand-text menu-text fw-bold ms-1 text-uppercase text-dark">
                 Kutai Timber
                 <micro class="d-block text-uppercase text-dark" style="font-size: 0.75rem;">Indonesia</micro>
             </span>

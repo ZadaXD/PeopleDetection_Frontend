@@ -7,7 +7,7 @@
     {{-- Tombol tambah kamera --}}
     <div class="mb-3 text-middle">
         <button class="btn rounded-pill btn-primary" data-bs-toggle="modal" data-bs-target="#addCameraModal">
-            <i class="bx bx-cctv me-2"></i> Tambah Kamera
+            <i class="bx bx-cctv"></i> Tambah Kamera
         </button>
     </div>
 
@@ -30,14 +30,14 @@
                             <form method="POST" action="{{ route('cameras.start', $cam->id) }}">
                                 @csrf
                                 <button class="btn btn-success rounded-pill">
-                                    <i class="bx bx-caret-right-circle me-2"></i> Start Recording
+                                    <i class="bx bx-caret-right-circle"></i> Start Recording
                                 </button>
                             </form>
 
                             {{-- Edit zone --}}
                             <a href="{{ route('cameras.editZone', $cam->id) }}"
                                class="btn btn-warning rounded-pill">
-                                <i class="bx bx-edit me-2"></i> Edit Zone
+                                <i class="bx bx-edit"></i> Edit Zone
                             </a>
 
                             {{-- Hapus kamera dari DB --}}
@@ -46,7 +46,7 @@
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-danger rounded-pill">
-                                    <i class="bx bx-trash me-2"></i> Hapus
+                                    <i class="bx bx-trash"></i> Hapus
                                 </button>
                             </form>
                         </div>
@@ -58,8 +58,8 @@
 
                         {{-- Riwayat sesi per kamera --}}
                         <h6>Riwayat Sesi</h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered session-table" id="session-table-{{ $cam->id }}">
+                        <div class="table-responsive text-nowrap">
+                            <table class="table table-sm table-striped session-table" id="session-table-{{ $cam->id }}">
                                 <thead class="table-light">
                                     <tr>
                                         <th>Zona</th>
@@ -78,7 +78,10 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="4" class="text-muted text-center">Belum ada riwayat sesi</td>
+                                            <td class="text-muted text-center">-</td>
+                                            <td class="text-muted text-center">-</td>
+                                            <td class="text-muted text-center">-</td>
+                                            <td class="text-muted text-center">Belum ada riwayat sesi</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -115,8 +118,12 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary rounded-pill">Simpan</button>
+                    <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">
+                        <i class="bx bx-x"></i> Batal
+                    </button>
+                    <button type="submit" class="btn btn-primary rounded-pill">
+                        <i class="bx bx-save"></i> Simpan
+                    </button>
                 </div>
             </form>
         </div>
@@ -130,13 +137,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const PY_API_URL = "{{ rtrim(pythonApi(''), '/') }}";
     const cameras = @json($cameras);
 
-    // --- DataTables untuk setiap kamera ---
+    // --- DataTables untuk setiap kamera dengan Export Excel ---
     @foreach ($cameras as $cam)
     $('#session-table-{{ $cam->id }}').DataTable({
-        pageLength: 5,
-        lengthMenu: [5, 10, 20, 50],
+        pageLength: 1,
+        lengthMenu: [1, 5, 10, 20, 50],
         ordering: true,
         searching: true,
+        dom: 'Bfrtip',
+        buttons: [
+            {
+                extend: 'excelHtml5',
+                text: '<i class="bx bxs-file-export"></i> Export Excel',
+                className: 'btn btn-sm btn-outline-success mb-2',
+                title: 'Riwayat Sesi - {{ $cam->name }}',
+                exportOptions: {
+                    columns: ':visible'
+                }
+            }
+        ],
         language: {
             search: "Cari:",
             lengthMenu: "Tampilkan _MENU_ entri",
