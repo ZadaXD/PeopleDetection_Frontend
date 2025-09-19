@@ -39,12 +39,23 @@ class DashboardController extends Controller
         );
     }
 
+    // ➡️ Hapus kamera dari DB + Python API
     public function deleteCamera($id)
     {
-        $resp = Http::delete(pythonApi("camera/{$id}"));
-        return back()->with(
-            'status',
-            $resp->successful() ? 'Camera deleted' : 'Failed to delete camera'
-        );
+        // Hapus dari DB
+        $cam = Cctv::find($id);
+        if ($cam) {
+            $cam->delete();
+        }
+
+        // Hapus dari Python API (abaikan error)
+        try {
+            Http::delete(pythonApi("camera/{$id}"));
+        } catch (\Exception $e) {
+            // Abaikan error dari Python
+        }
+
+        // Selalu kirim pesan sukses
+        return back()->with('status', 'Kamera berhasil dihapus');
     }
 }

@@ -16,33 +16,39 @@
             <div class="col-md-6">
                 <div class="card mb-4 shadow">
                     {{-- Stream video dari Python (MJPEG) --}}
-                    <img src="{{ pythonApi('video_feed/' . $cam->id) }}"
-                         class="card-img-top"
-                         alt="{{ $cam->name }}"
-                         style="height:300px; object-fit:cover;">
+                    <img src="{{ pythonApi('video_feed/' . $cam->id) }}" class="card-img-top"
+                         alt="{{ $cam->name }}" style="height:300px; object-fit:cover;">
 
                     <div class="card-body">
                         <h5 class="card-title">{{ $cam->name }}</h5>
                         <p class="card-text"><small class="text-muted">{{ $cam->rtsp_url }}</small></p>
 
                         <div class="d-flex justify-content-between mb-3">
-                            {{-- Start recording --}}
-                            <form method="POST" action="{{ route('cameras.start', $cam->id) }}">
-                                @csrf
-                                <button class="btn btn-success rounded-pill">
-                                    <i class="bx bx-caret-right-circle"></i> Start Recording
-                                </button>
-                            </form>
+                            {{-- Start/Stop recording --}}
+                            @if (!$cam->is_recording)
+                                <form method="POST" action="{{ route('cameras.start', $cam->id) }}">
+                                    @csrf
+                                    <button class="btn btn-success rounded-pill">
+                                        <i class="bx bx-caret-right-circle"></i> Start Recording
+                                    </button>
+                                </form>
+                            @else
+                                <form method="POST" action="{{ route('cameras.stop', $cam->id) }}">
+                                    @csrf
+                                    <button class="btn btn-danger rounded-pill">
+                                        <i class="bx bx-stop-circle"></i> Stop Recording
+                                    </button>
+                                </form>
+                            @endif
 
                             {{-- Edit zone --}}
-                            <a href="{{ route('cameras.editZone', $cam->id) }}"
-                               class="btn btn-warning rounded-pill">
+                            <a href="{{ route('cameras.editZone', $cam->id) }}" class="btn btn-warning rounded-pill">
                                 <i class="bx bx-edit"></i> Edit Zone
                             </a>
 
-                            {{-- Hapus kamera dari DB --}}
+                            {{-- Hapus kamera --}}
                             <form method="POST" action="{{ route('cameras.destroy', $cam->id) }}"
-                                  onsubmit="return confirm('Hapus kamera ini dari database?');">
+                                  class="delete-camera-form" data-name="{{ $cam->name }}">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-danger rounded-pill">
@@ -72,7 +78,7 @@
                                     @forelse($eventsByCamera[$cam->id] ?? [] as $ev)
                                         <tr>
                                             <td>{{ $ev['zone_name'] ?? '-' }}</td>
-                                            <td>{{ $ev['start_time'] }}</td>
+                                            <td>{{ $ev['start_time'] ?? '-' }}</td>
                                             <td>{{ $ev['end_time'] ?? '-' }}</td>
                                             <td>{{ $ev['duration'] ?? 'Aktif' }}</td>
                                         </tr>
@@ -132,30 +138,30 @@
 @endsection
 
 @push('scripts')
+{{-- SweetAlert2 --}}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const PY_API_URL = "{{ rtrim(pythonApi(''), '/') }}";
     const cameras = @json($cameras);
 
-    // --- DataTables untuk setiap kamera dengan Export Excel ---
+    // --- DataTables untuk setiap kamera ---
     @foreach ($cameras as $cam)
     $('#session-table-{{ $cam->id }}').DataTable({
         pageLength: 1,
         lengthMenu: [1, 5, 10, 20, 50],
         ordering: true,
         searching: true,
-        dom: 'Bfrtip',
-        buttons: [
-            {
-                extend: 'excelHtml5',
-                text: '<i class="bx bxs-file-export"></i> Export Excel',
-                className: 'btn btn-sm btn-outline-success mb-2',
-                title: 'Riwayat Sesi - {{ $cam->name }}',
-                exportOptions: {
-                    columns: ':visible'
-                }
+        dom: 'Blfrtip',
+        buttons: [{
+            extend: 'excelHtml5',
+            text: '<i class="bx bxs-file-export"></i> Export Excel',
+            className: 'btn btn-sm btn-outline-success mb-2',
+            title: 'Riwayat Sesi - {{ $cam->name }}',
+            exportOptions: {
+                columns: ':visible'
             }
-        ],
+        }],
         language: {
             search: "Cari:",
             lengthMenu: "Tampilkan _MENU_ entri",
@@ -181,6 +187,38 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePeopleCount(c.id);
         setInterval(() => updatePeopleCount(c.id), 2000);
     });
+
+    // --- Konfirmasi hapus kamera ---
+    document.querySelectorAll('.delete-camera-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const camName = this.dataset.name;
+            Swal.fire({
+                title: 'Apakah kamu yakin?',
+                html: `Kamera <b>${camName}</b> akan dihapus permanen.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="bx bx-trash"></i> Ya, Hapus',
+                cancelButtonText: '<i class="bx bx-x"></i> Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.submit();
+                }
+            });
+        });
+    });
+
+    // --- Flash success dari Laravel ---
+    @if(session('status'))
+        Swal.fire({
+            icon: 'success',
+            title: 'Berhasil',
+            text: "{{ session('status') }}",
+            confirmButtonColor: '#28a745'
+        });
+    @endif
 });
 </script>
 @endpush

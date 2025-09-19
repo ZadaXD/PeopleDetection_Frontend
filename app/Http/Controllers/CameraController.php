@@ -135,11 +135,27 @@ class CameraController extends Controller
 
 
     // ➡️ Hapus zona
+    // ➡️ Hapus zona (DB atau API)
     public function deleteZone($id, $zoneId)
     {
-        $resp = Http::delete(pythonApi("camera/{$id}/zone/{$zoneId}"));
-        return back()->with('status', $resp->successful() ? 'Zona dihapus' : 'Gagal hapus zona');
+        $camera = Cctv::findOrFail($id);
+
+        // Coba hapus dari DB dulu
+        $zone = $camera->zones()->find($zoneId);
+        if ($zone) {
+            $zone->delete();
+            return back()->with('status', 'Zona berhasil dihapus dari database');
+        }
+
+        // Kalau tidak ada di DB, hapus via Python API
+        try {
+            $resp = Http::delete(pythonApi("camera/{$id}/zone/{$zoneId}"));
+            return back()->with('status', $resp->successful() ? 'Zona dihapus dari Python API' : 'Gagal hapus zona di Python');
+        } catch (\Exception $e) {
+            return back()->with('status', 'Gagal hapus zona: ' . $e->getMessage());
+        }
     }
+
 
     // ➡️ Atur minimal durasi sesi
     public function setMinSession(Request $request, $id)
