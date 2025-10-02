@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Http;
 
 class CameraController extends Controller
 {
-    // ➡️ Tambah kamera baru ke DB + register ke Python
+    // Tambah kamera baru ke DB + register ke Python
     public function storeToDb(Request $request)
     {
         $request->validate([
@@ -38,7 +38,7 @@ class CameraController extends Controller
     }
 
 
-    // ➡️ Hapus kamera dari DB + beritahu Python
+    // Hapus kamera dari DB + beritahu Python
     public function destroy($id)
     {
         $cam = Cctv::findOrFail($id);
@@ -53,14 +53,14 @@ class CameraController extends Controller
         return back()->with('status', 'Kamera dihapus');
     }
 
-    // ➡️ Start recording
+    // Start recording
     public function startRecording($id)
     {
         $resp = Http::post(pythonApi("start_recording/{$id}"));
         return back()->with('status', $resp->successful() ? 'Recording dimulai' : 'Gagal memulai recording');
     }
 
-    // ➡️ Edit zone
+    // Edit zone
     public function editZone($id)
     {
         $camera = Cctv::findOrFail($id);
@@ -99,7 +99,7 @@ class CameraController extends Controller
     }
 
 
-    // ➡️ Simpan zona baru
+    // Simpan zona baru
     public function storeZone(Request $request, $id)
     {
         $request->validate([
@@ -134,8 +134,7 @@ class CameraController extends Controller
 
 
 
-    // ➡️ Hapus zona
-    // ➡️ Hapus zona (DB atau API)
+    // Hapus zona
     public function deleteZone($id, $zoneId)
     {
         $camera = Cctv::findOrFail($id);
@@ -157,7 +156,7 @@ class CameraController extends Controller
     }
 
 
-    // ➡️ Atur minimal durasi sesi
+    //  Atur minimal durasi sesi
     public function setMinSession(Request $request, $id)
     {
         $totalSeconds =
