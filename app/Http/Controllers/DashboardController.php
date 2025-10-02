@@ -9,17 +9,24 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        // Ambil daftar kamera dari DB Laravel
         $cameras = Cctv::all();
 
-        // Ambil semua events dari backend Python
+        // Ambil events dari Python
         $events = Http::get(pythonApi('events_json'))->json() ?? [];
 
-        // Kelompokkan event per kamera
-        $eventsByCamera = collect($events)->groupBy('camera_id');
+        $events = collect($events)->map(function ($ev) {
+            $ev['is_active'] = empty($ev['end_time']);
+            // kalau Python sudah kirim duration, biarkan
+            return $ev;
+        });
 
-        return view('dashboard', compact('cameras', 'eventsByCamera'));
+        if (request()->ajax()) {
+            return response()->json(['data' => $events]);
+        }
+
+        return view('dashboard', compact('cameras'));
     }
+
 
     public function startRecording($id)
     {
