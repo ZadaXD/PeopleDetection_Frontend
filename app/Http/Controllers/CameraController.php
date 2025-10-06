@@ -39,25 +39,42 @@ class CameraController extends Controller
 
 
     // Hapus kamera dari DB + beritahu Python
-    public function destroy($id)
+    public function deleteCamera($id)
     {
-        $cam = Cctv::findOrFail($id);
-        $cam->delete();
+        // Hapus dari DB
+        $cam = Cctv::find($id);
+        if ($cam) {
+            $cam->delete();
+        }
 
+        // Hapus dari Python API (abaikan error)
         try {
             Http::delete(pythonApi("camera/{$id}"));
         } catch (\Exception $e) {
-            return back()->with('status', 'Kamera dihapus dari DB, tapi gagal hapus di Python: ' . $e->getMessage());
+            // Abaikan error dari Python
         }
 
-        return back()->with('status', 'Kamera dihapus');
+        // Selalu kirim pesan sukses
+        return back()->with('status', 'Kamera berhasil dihapus');
     }
 
     // Start recording
     public function startRecording($id)
     {
         $resp = Http::post(pythonApi("start_recording/{$id}"));
-        return back()->with('status', $resp->successful() ? 'Recording dimulai' : 'Gagal memulai recording');
+        return back()->with(
+            'status',
+            $resp->successful() ? 'Recording started' : 'Failed to start recording'
+        );
+    }
+
+    public function stopRecording($id)
+    {
+        $resp = Http::post(pythonApi("stop_recording/{$id}"));
+        return back()->with(
+            'status',
+            $resp->successful() ? 'Recording stopped' : 'Failed to stop recording'
+        );
     }
 
     // Edit zone

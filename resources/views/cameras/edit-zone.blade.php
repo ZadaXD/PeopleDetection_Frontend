@@ -3,290 +3,289 @@
 @section('title', 'Edit Zona Kamera - ' . $camera->name)
 
 @section('content')
-<div class="container-xxl flex-grow-1 container-p-y">
-    <h4 class="fw-bold py-3 mb-4">Edit Zona - {{ $camera->name }}</h4>
-
-    {{-- Daftar Zona --}}
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">Zona Tersimpan</h5>
-        </div>
-        <div class="card-body">
-            @if (!empty($zones))
-                <ul class="list-group">
-                    @foreach ($zones as $zone)
-                        <li class="list-group-item d-flex justify-content-between align-items-start">
-                            <div>
-                                <strong>{{ $zone['name'] }}</strong>
-                                <small class="text-muted d-block">
-                                    Max: {{ $zone['max_people'] }} | Sumber: {{ strtoupper($zone['source']) }}
-                                </small>
-                            </div>
-                            @if ($zone['source'] === 'db')
-                                <button type="button"
-                                    class="btn btn-sm btn-outline-danger rounded-pill btn-delete-zone"
-                                    data-camera="{{ $camera->id }}"
-                                    data-zone="{{ $zone['id'] }}"
-                                    data-zonename="{{ $zone['name'] }}">
-                                    <i class="bx bx-trash"></i> Hapus
-                                </button>
-                            @endif
-                        </li>
-                    @endforeach
-                </ul>
-            @else
-                <p class="text-muted">Belum ada zona untuk kamera ini.</p>
-            @endif
-        </div>
-    </div>
-
-    {{-- Form tambah zona --}}
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">Tambah / Edit Zona</h5>
-        </div>
-        <div class="card-body">
-            <form id="zoneForm" method="POST" action="{{ route('cameras.storeZone', $camera->id) }}">
-                @csrf
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Nama Zona</label>
-                        <input type="text" name="zone_name" id="zone_name" class="form-control"
-                            placeholder="Contoh: Pintu Masuk">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Maksimal Orang</label>
-                        <input type="number" name="zone_max_people" id="zone_max_people" class="form-control"
-                            value="0" min="0">
-                    </div>
-                </div>
-
-                <div class="mt-3">
-                    <label class="form-label">Gambar Zona</label>
-                    <div id="video-container" class="position-relative border rounded d-inline-block">
-                        <img id="video-feed" src="{{ pythonApi("video_feed/{$camera->id}") }}" alt="Video Feed">
-                        <canvas id="drawing-canvas" class="position-absolute top-0 start-0"
-                            style="cursor: crosshair;"></canvas>
-                    </div>
-                    <small class="text-muted">Klik pada gambar untuk menggambar polygon zona.</small>
-                </div>
-
-                <input type="hidden" name="zone_coordinates" id="zone-input">
-
-                <div class="mt-3 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary rounded-pill">
-                        <i class="bx bx-save"></i> Simpan Zona
-                    </button>
-                    <button type="button" id="reset-drawing-btn" class="btn btn-danger rounded-pill">
-                        <i class="bx bx-refresh"></i> Reset Gambar
-                    </button>
-                </div>
-            </form>
-
-            {{-- Tabel koordinat --}}
-            <div class="mt-4">
-                <h6>Koordinat Zona</h6>
-                <table class="table table-sm table-bordered">
-                    <thead class="table-light">
-                        <tr>
-                            <th>#</th>
-                            <th>X</th>
-                            <th>Y</th>
-                        </tr>
-                    </thead>
-                    <tbody id="coords-table-body">
-                        <tr>
-                            <td colspan="3" class="text-muted text-center">Belum ada titik</td>
-                        </tr>
-                    </tbody>
-                </table>
+    <div class="container-xxl flex-grow-1 container-p-y">
+        <h4 class="fw-bold py-3 mb-4">Edit Zona - {{ $camera->name }}</h4>
+        <a href="{{ route('dashboard') }}" class="btn btn-secondary rounded-pill">
+            <i class="bx bx-left-arrow-alt"></i> Kembali
+        </a>
+        <hr>
+        {{-- Daftar Zona --}}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Zona Tersimpan</h5>
+            </div>
+            <div class="card-body">
+                @if (!empty($zones))
+                    <ul class="list-group">
+                        @foreach ($zones as $zone)
+                            <li class="list-group-item d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ $zone['name'] }}</strong>
+                                    <small class="text-muted d-block">
+                                        Max: {{ $zone['max_people'] }}
+                                    </small>
+                                </div>
+                                @if ($zone['source'] === 'db')
+                                    <button type="button"
+                                        class="btn btn-sm btn-outline-danger rounded-pill btn-delete-zone"
+                                        data-camera="{{ $camera->id }}" data-zone="{{ $zone['id'] }}"
+                                        data-zonename="{{ $zone['name'] }}">
+                                        <i class="bx bx-trash"></i> Hapus
+                                    </button>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                @else
+                    <p class="text-muted">Belum ada zona untuk kamera ini.</p>
+                @endif
             </div>
         </div>
-    </div>
 
-    {{-- Durasi minimal sesi --}}
-    <div class="card mb-4">
-        <div class="card-header">
-            <h6 class="mb-0">Durasi Sesi Minimal</h6>
-        </div>
-        <div class="card-body">
-            <form method="POST" action="{{ route('cameras.setMinSession', $camera->id) }}">
-                @csrf
-                <div class="row g-2">
-                    <div class="col-md-4">
-                        <input type="number" name="hours" class="form-control"
-                            value="{{ floor($camera->min_session_duration / 3600) }}" min="0"
-                            placeholder="Jam">
+        {{-- Form tambah zona --}}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Tambah / Edit Zona</h5>
+            </div>
+            <div class="card-body">
+                <form id="zoneForm" method="POST" action="{{ route('cameras.storeZone', $camera->id) }}">
+                    @csrf
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nama Zona</label>
+                            <input type="text" name="zone_name" id="zone_name" class="form-control"
+                                placeholder="Contoh: Pintu Masuk">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Maksimal Orang</label>
+                            <input type="number" name="zone_max_people" id="zone_max_people" class="form-control"
+                                value="0" min="0">
+                        </div>
                     </div>
-                    <div class="col-md-4">
-                        <input type="number" name="minutes" class="form-control"
-                            value="{{ floor(($camera->min_session_duration % 3600) / 60) }}" min="0"
-                            max="59" placeholder="Menit">
+
+                    <div class="mt-3">
+                        <label class="form-label">Gambar Zona</label>
+                        <div id="video-container" class="position-relative border rounded d-inline-block">
+                            <img id="video-feed" src="{{ pythonApi("video_feed/{$camera->id}") }}" alt="Video Feed">
+                            <canvas id="drawing-canvas" class="position-absolute top-0 start-0"
+                                style="cursor: crosshair;"></canvas>
+                        </div>
+                        <small class="text-muted">Klik pada gambar untuk menggambar polygon zona.</small>
                     </div>
-                    <div class="col-md-4">
-                        <input type="number" name="seconds" class="form-control"
-                            value="{{ $camera->min_session_duration % 60 }}" min="0" max="59"
-                            placeholder="Detik">
+
+                    <input type="hidden" name="zone_coordinates" id="zone-input">
+
+                    <div class="mt-3 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary rounded-pill">
+                            <i class="bx bx-save"></i> Simpan Zona
+                        </button>
+                        <button type="button" id="reset-drawing-btn" class="btn btn-danger rounded-pill">
+                            <i class="bx bx-refresh"></i> Reset Gambar
+                        </button>
                     </div>
+                </form>
+
+                {{-- Tabel koordinat --}}
+                <div class="mt-4">
+                    <h6>Koordinat Zona</h6>
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>X</th>
+                                <th>Y</th>
+                            </tr>
+                        </thead>
+                        <tbody id="coords-table-body">
+                            <tr>
+                                <td colspan="3" class="text-muted text-center">Belum ada titik</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-                <button type="submit" class="btn btn-success w-100 mt-3 rounded-pill">
-                    <i class="bx bx-save"></i> Simpan Durasi
-                </button>
-            </form>
+            </div>
         </div>
+
+        {{-- Durasi minimal sesi --}}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Durasi Sesi Minimal</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ route('cameras.setMinSession', $camera->id) }}">
+                    @csrf
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <input type="number" name="hours" class="form-control"
+                                value="{{ floor($camera->min_session_duration / 3600) }}" min="0" placeholder="Jam">
+                        </div>
+                        <div class="col-md-4">
+                            <input type="number" name="minutes" class="form-control"
+                                value="{{ floor(($camera->min_session_duration % 3600) / 60) }}" min="0"
+                                max="59" placeholder="Menit">
+                        </div>
+                        <div class="col-md-4">
+                            <input type="number" name="seconds" class="form-control"
+                                value="{{ $camera->min_session_duration % 60 }}" min="0" max="59"
+                                placeholder="Detik">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 mt-3 rounded-pill">
+                        <i class="bx bx-save"></i> Simpan Durasi
+                    </button>
+                </form>
+            </div>
+        </div>
+
     </div>
 
-    <a href="{{ route('dashboard') }}" class="btn btn-secondary rounded-pill">
-        <i class="bx bx-left-arrow-alt"></i> Kembali
-    </a>
-</div>
+    {{-- SweetAlert2 --}}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-{{-- SweetAlert2 --}}
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('drawing-canvas');
+            const videoFeed = document.getElementById('video-feed');
+            const zoneInput = document.getElementById('zone-input');
+            const resetBtn = document.getElementById('reset-drawing-btn');
+            const coordsTableBody = document.getElementById('coords-table-body');
+            const ctx = canvas.getContext('2d');
+            let points = [];
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const canvas = document.getElementById('drawing-canvas');
-    const videoFeed = document.getElementById('video-feed');
-    const zoneInput = document.getElementById('zone-input');
-    const resetBtn = document.getElementById('reset-drawing-btn');
-    const coordsTableBody = document.getElementById('coords-table-body');
-    const ctx = canvas.getContext('2d');
-    let points = [];
+            const existingZones = @json($zones);
 
-    const existingZones = @json($zones);
-
-    function resizeCanvas() {
-        canvas.width = videoFeed.naturalWidth;
-        canvas.height = videoFeed.naturalHeight;
-        canvas.style.width = videoFeed.width + "px";
-        canvas.style.height = videoFeed.height + "px";
-        redraw();
-    }
-
-    function updateCoordsTable() {
-        coordsTableBody.innerHTML = '';
-        if (points.length === 0) {
-            coordsTableBody.innerHTML =
-                '<tr><td colspan="3" class="text-muted text-center">Belum ada titik</td></tr>';
-            return;
-        }
-        points.forEach((p, i) => {
-            coordsTableBody.innerHTML +=
-                `<tr><td>${i + 1}</td><td>${p[0].toFixed(0)}</td><td>${p[1].toFixed(0)}</td></tr>`;
-        });
-    }
-
-    function redraw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        if (points.length > 1) {
-            ctx.beginPath();
-            ctx.moveTo(points[0][0], points[0][1]);
-            for (let i = 1; i < points.length; i++) {
-                ctx.lineTo(points[i][0], points[i][1]);
+            function resizeCanvas() {
+                canvas.width = videoFeed.naturalWidth;
+                canvas.height = videoFeed.naturalHeight;
+                canvas.style.width = videoFeed.width + "px";
+                canvas.style.height = videoFeed.height + "px";
+                redraw();
             }
-            ctx.closePath();
-            ctx.strokeStyle = '#FFFF00';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-        }
 
-        updateCoordsTable();
-
-        existingZones.forEach(z => {
-            if (z.coordinates) {
-                try {
-                    const coords = JSON.parse(z.coordinates);
-                    if (Array.isArray(coords) && coords.length > 1) {
-                        ctx.beginPath();
-                        ctx.moveTo(coords[0][0], coords[0][1]);
-                        for (let i = 1; i < coords.length; i++) {
-                            ctx.lineTo(coords[i][0], coords[i][1]);
-                        }
-                        ctx.closePath();
-                        ctx.strokeStyle = (z.source === 'db') ? '#00FF00' : '#FF0000';
-                        ctx.lineWidth = 2;
-                        ctx.stroke();
-
-                        let avgX = coords.reduce((a, c) => a + c[0], 0) / coords.length;
-                        let avgY = coords.reduce((a, c) => a + c[1], 0) / coords.length;
-                        ctx.fillStyle = '#FFFFFF';
-                        ctx.font = "12px Arial";
-                        ctx.fillText(z.name, avgX, avgY);
-                    }
-                } catch (e) {
-                    console.warn("Koordinat tidak valid:", z.coordinates);
+            function updateCoordsTable() {
+                coordsTableBody.innerHTML = '';
+                if (points.length === 0) {
+                    coordsTableBody.innerHTML =
+                        '<tr><td colspan="3" class="text-muted text-center">Belum ada titik</td></tr>';
+                    return;
                 }
+                points.forEach((p, i) => {
+                    coordsTableBody.innerHTML +=
+                        `<tr><td>${i + 1}</td><td>${p[0].toFixed(0)}</td><td>${p[1].toFixed(0)}</td></tr>`;
+                });
             }
-        });
-    }
 
-    canvas.addEventListener('click', e => {
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        const x = (e.clientX - rect.left) * scaleX;
-        const y = (e.clientY - rect.top) * scaleY;
+            function redraw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        points.push([x, y]);
-        zoneInput.value = JSON.stringify(points);
-        redraw();
-    });
+                if (points.length > 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(points[0][0], points[0][1]);
+                    for (let i = 1; i < points.length; i++) {
+                        ctx.lineTo(points[i][0], points[i][1]);
+                    }
+                    ctx.closePath();
+                    ctx.strokeStyle = '#FFFF00';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
 
-    resetBtn.addEventListener('click', () => {
-        points = [];
-        zoneInput.value = '[]';
-        redraw();
-    });
+                updateCoordsTable();
 
-    window.addEventListener('resize', resizeCanvas);
-    videoFeed.onload = resizeCanvas;
-    if (videoFeed.complete) resizeCanvas();
+                existingZones.forEach(z => {
+                    if (z.coordinates) {
+                        try {
+                            const coords = JSON.parse(z.coordinates);
+                            if (Array.isArray(coords) && coords.length > 1) {
+                                ctx.beginPath();
+                                ctx.moveTo(coords[0][0], coords[0][1]);
+                                for (let i = 1; i < coords.length; i++) {
+                                    ctx.lineTo(coords[i][0], coords[i][1]);
+                                }
+                                ctx.closePath();
+                                ctx.strokeStyle = (z.source === 'db') ? '#00FF00' : '#FF0000';
+                                ctx.lineWidth = 2;
+                                ctx.stroke();
 
-    // --- Konfirmasi hapus zona ---
-    document.querySelectorAll('.btn-delete-zone').forEach(btn => {
-        btn.addEventListener('click', function () {
-            const cameraId = this.dataset.camera;
-            const zoneId = this.dataset.zone;
-            const zoneName = this.dataset.zonename;
+                                let avgX = coords.reduce((a, c) => a + c[0], 0) / coords.length;
+                                let avgY = coords.reduce((a, c) => a + c[1], 0) / coords.length;
+                                ctx.fillStyle = '#FFFFFF';
+                                ctx.font = "12px Arial";
+                                ctx.fillText(z.name, avgX, avgY);
+                            }
+                        } catch (e) {
+                            console.warn("Koordinat tidak valid:", z.coordinates);
+                        }
+                    }
+                });
+            }
 
-            Swal.fire({
-                title: 'Apakah kamu yakin?',
-                html: `Zona <b>${zoneName}</b> akan dihapus permanen.`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: '<i class="bx bx-trash"></i> Ya, Hapus',
-                cancelButtonText: '<i class="bx bx-x"></i> Batal'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = "{{ route('cameras.deleteZone', ['id' => ':cameraId', 'zoneId' => ':zoneId']) }}"
-                        .replace(':cameraId', cameraId)
-                        .replace(':zoneId', zoneId);
-                    form.innerHTML = `
+            canvas.addEventListener('click', e => {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+
+                points.push([x, y]);
+                zoneInput.value = JSON.stringify(points);
+                redraw();
+            });
+
+            resetBtn.addEventListener('click', () => {
+                points = [];
+                zoneInput.value = '[]';
+                redraw();
+            });
+
+            window.addEventListener('resize', resizeCanvas);
+            videoFeed.onload = resizeCanvas;
+            if (videoFeed.complete) resizeCanvas();
+
+            // --- Konfirmasi hapus zona ---
+            document.querySelectorAll('.btn-delete-zone').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const cameraId = this.dataset.camera;
+                    const zoneId = this.dataset.zone;
+                    const zoneName = this.dataset.zonename;
+
+                    Swal.fire({
+                        title: 'Apakah kamu yakin?',
+                        html: `Zona <b>${zoneName}</b> akan dihapus permanen.`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: '<i class="bx bx-trash"></i> Ya, Hapus',
+                        cancelButtonText: '<i class="bx bx-x"></i> Batal'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            const form = document.createElement('form');
+                            form.method = 'POST';
+                            form.action =
+                                "{{ route('cameras.deleteZone', ['id' => ':cameraId', 'zoneId' => ':zoneId']) }}"
+                                .replace(':cameraId', cameraId)
+                                .replace(':zoneId', zoneId);
+                            form.innerHTML = `
                         @csrf
                         @method('DELETE')
                     `;
-                    document.body.appendChild(form);
-                    form.submit();
-                }
+                            document.body.appendChild(form);
+                            form.submit();
+                        }
+                    });
+                });
             });
-        });
-    });
 
-    // --- Flash success dari Laravel ---
-    @if(session('status'))
-        Swal.fire({
-            icon: 'success',
-            title: 'Berhasil',
-            text: "{{ session('status') }}",
-            confirmButtonColor: '#28a745'
+            // --- Flash success dari Laravel ---
+            @if (session('status'))
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil',
+                    text: "{{ session('status') }}",
+                    confirmButtonColor: '#28a745'
+                });
+            @endif
         });
-    @endif
-});
-</script>
+    </script>
 @endsection
