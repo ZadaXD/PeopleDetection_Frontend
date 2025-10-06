@@ -4,16 +4,23 @@
     <div class="container">
         <h4 class="fw-bold py-3 mb-4">Dashboard Kamera</h4>
 
-        {{-- Tombol tambah kamera --}}
-        <div class="mb-3 text-middle">
+        {{-- Tombol tambah kamera dan search --}}
+        <div class="d-flex justify-content-between align-items-center mb-3">
             <button class="btn rounded-pill btn-primary" data-bs-toggle="modal" data-bs-target="#addCameraModal">
                 <i class="bx bx-cctv"></i> Tambah Kamera
             </button>
+
+            {{-- Input Pencarian Kamera --}}
+            <div class="d-flex align-items-center">
+                <input type="text" id="searchCamera" class="form-control rounded-pill" placeholder="Cari kamera..."
+                    style="max-width: 250px;">
+            </div>
         </div>
 
-        <div class="row">
+        {{-- Daftar Kamera --}}
+        <div class="row" id="cameraContainer">
             @forelse($cameras as $cam)
-                <div class="col-md-6">
+                <div class="col-md-6 camera-card" data-name="{{ strtolower($cam->name) }}">
                     <div class="card mb-4 shadow">
                         {{-- Stream video dari Python (MJPEG) --}}
                         <img src="{{ pythonApi('video_feed/' . $cam->id) }}" class="card-img-top" alt="{{ $cam->name }}"
@@ -57,8 +64,9 @@
                                 </form>
                             </div>
 
+                            {{-- People Count --}}
                             <div class="mb-3">
-                                <strong>Orang Terdeteksi:</strong>
+                                <strong>Total Orang dalam Zona:</strong>
                                 <span id="people-count-{{ $cam->id }}">0</span>
                             </div>
 
@@ -127,18 +135,27 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const PY_API_URL = "{{ rtrim(pythonApi(''), '/') }}";
             const cameras = @json($cameras);
 
-            // --- DataTables AJAX untuk setiap kamera ---
+            // === FITUR SEARCH KAMERA ===
+            const searchInput = document.getElementById('searchCamera');
+            const cameraCards = document.querySelectorAll('.camera-card');
+
+            searchInput.addEventListener('keyup', () => {
+                const keyword = searchInput.value.toLowerCase();
+                cameraCards.forEach(card => {
+                    const name = card.dataset.name;
+                    card.style.display = name.includes(keyword) ? '' : 'none';
+                });
+            });
+
+            // === LOAD EVENT SESSIONS VIA AJAX ===
             @foreach ($cameras as $cam)
                 let table{{ $cam->id }} = $('#session-table-{{ $cam->id }}').DataTable({
                     ajax: {
-                        url: "{{ route('dashboard') }}",
-                        data: {
-                            camera_id: {{ $cam->id }}
-                        },
+                        url: "{{ route('dashboard.events') }}",
                         dataSrc: function(json) {
+                            if (!json.success) return [];
                             return json.data.filter(ev => ev.camera_id == {{ $cam->id }});
                         }
                     },
@@ -162,7 +179,6 @@
                             data: 'duration',
                             render: function(data, type, row) {
                                 if (row.is_active) {
-                                    // data-start = UNIX timestamp
                                     return `<span class="realtime-timer" data-start="${row.start_ts}">00:00:00</span>`;
                                 }
                                 return data ?? '-';
@@ -200,29 +216,35 @@
                     }
                 });
 
-                // refresh otomatis tiap 10 detik
+                // reload tiap detik
                 setInterval(() => {
                     table{{ $cam->id }}.ajax.reload(null, false);
-                }, 10000);
+                }, 1000);
             @endforeach
 
-            // --- Update people count setiap kamera ---
-            function updatePeopleCount(camId) {
-                fetch(`${PY_API_URL}/person_count/${camId}`)
-                    .then(r => r.ok ? r.json() : Promise.reject('no response'))
-                    .then(data => {
-                        const el = document.getElementById(`people-count-${camId}`);
-                        if (el) el.textContent = (data.count !== undefined ? data.count : 0);
+            // === UPDATE PEOPLE COUNT (REALTIME) ===
+            function updatePeopleCount() {
+                fetch("{{ route('dashboard.people') }}")
+                    .then(res => res.json())
+                    .then(json => {
+                        if (!json.success) return;
+                        let counts = json.people_counts || {};
+                        let total = json.total_people || 0;
+
+                        cameras.forEach(cam => {
+                            const el = document.getElementById('people-count-' + cam.id);
+                            if (el) el.textContent = counts[cam.id] || 0;
+                        });
+                        const totalEl = document.getElementById('people-count-total');
+                        if (totalEl) totalEl.textContent = total;
                     })
-                    .catch(err => console.debug('people_count error', camId, err));
+                    .catch(err => console.error("updatePeopleCount error:", err));
             }
 
-            cameras.forEach(c => {
-                updatePeopleCount(c.id);
-                setInterval(() => updatePeopleCount(c.id), 2000);
-            });
+            updatePeopleCount();
+            setInterval(updatePeopleCount, 2000);
 
-            // --- Konfirmasi hapus kamera ---
+            // === HAPUS KAMERA ===
             document.querySelectorAll('.delete-camera-form').forEach(form => {
                 form.addEventListener('submit', function(e) {
                     e.preventDefault();
@@ -244,7 +266,7 @@
                 });
             });
 
-            // --- Flash success dari Laravel ---
+            // === FLASH SUCCESS ===
             @if (session('status'))
                 Swal.fire({
                     icon: 'success',
@@ -255,7 +277,7 @@
             @endif
         });
 
-        // --- Realtime Durations (update tiap detik) ---
+        // === UPDATE DURASI REALTIME ===
         function pad(num) {
             return num.toString().padStart(2, '0');
         }
@@ -264,7 +286,6 @@
             document.querySelectorAll('.realtime-timer').forEach(el => {
                 let start = parseInt(el.dataset.start, 10);
                 if (!start) return;
-
                 const now = Math.floor(Date.now() / 1000);
                 let diff = now - start;
                 if (diff < 0) diff = 0;
@@ -272,12 +293,10 @@
                 const h = pad(Math.floor(diff / 3600));
                 const m = pad(Math.floor((diff % 3600) / 60));
                 const s = pad(diff % 60);
-
                 el.textContent = `${h}:${m}:${s}`;
             });
         }
 
-        // hitung durasi setiap 1 detik (ringan, hanya manipulasi DOM)
         setInterval(updateDurations, 1000);
     </script>
 @endpush
